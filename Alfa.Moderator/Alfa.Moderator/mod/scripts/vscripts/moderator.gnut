@@ -1,0 +1,51 @@
+global function Moderator_Init
+global function CheckModerator
+
+
+struct {
+	array<string> MODERATOR
+	string ModeratorStringLastVal
+} file
+
+void function Moderator_Init()
+{
+	UpdateModeratorList()
+}
+
+void function UpdateModeratorList()
+{
+	string cvar = GetConVarString( "moderators" )
+	if ( file.ModeratorStringLastVal == cvar )
+		return
+	
+	file.MODERATOR = split( cvar, "," )
+	foreach ( string admin in file.MODERATOR )
+		StringReplace( admin, " ", "" )
+
+}
+
+bool function CheckModerator( entity player )
+{
+	bool hasModerator = false;
+
+	UpdateModeratorList()
+	if ( file.MODERATOR.len() == 0 )
+		return hasModerator;
+	
+	if ( file.MODERATOR.contains( player.GetPlayerName().tolower() ) )
+	{
+		hasModerator = true;
+		return hasModerator;
+	}
+	if ( file.MODERATOR.contains( player.GetPlayerName() ) )
+	{
+		hasModerator = true;
+		return hasModerator;
+	}
+	if ( file.MODERATOR.contains( player.GetUID() ) )
+	{
+		hasModerator = true;
+		return hasModerator;
+	}
+	return hasModerator;
+}

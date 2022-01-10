@@ -1,0 +1,54 @@
+{
+	"Name" : "alFa.Moderator",
+	"Description" : "Moderator group level functions and private_match lockdown for public servers",
+	"Version": "1.0.0",
+	"LoadPriority": 2,
+
+	"ConVars": [
+		{
+			"Name": "moderators",
+			"DefaultValue": "FrostySn0men,fr0kn"
+		}
+	],
+	"Scripts": [
+		{
+			"Path": "checktargetplayername.gnut",
+			"RunOn": "SERVER && MP"
+		},
+		{
+			"Path": "list.gnut",
+			"RunOn": "SERVER && MP",
+			"ServerCallback": {
+				"After": "LISTCommand"
+			}
+		},
+		{
+			"Path": "kick.gnut",
+			"RunOn": "SERVER && MP",
+			"ServerCallback": {
+				"After": "KICKCommand"
+			}
+		},
+		{
+			"Path": "ban.gnut",
+			"RunOn": "SERVER && MP",
+			"ServerCallback": {
+				"After": "BANCommand"
+			}
+		},
+		{
+			"Path": "unban.gnut",
+			"RunOn": "SERVER && MP",
+			"ServerCallback": {
+				"After": "UNBANCommand"
+			}
+		},
+		{
+			"Path": "moderator.gnut",
+			"RunOn": "SERVER && MP",
+			"ServerCallback": {
+				"After": "Moderator_Init"
+			}
+		}
+	]
+}

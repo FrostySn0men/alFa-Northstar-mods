@@ -1,0 +1,85 @@
+global function BANCommand
+
+void function BANCommand()
+{
+	#if SERVER
+	AddClientCommandCallback("modban", BAN);
+	#endif
+}
+
+bool function BAN(entity player, array<string> args)
+{
+
+	bool hasModerator = false;
+	hasModerator=CheckModerator(player)
+
+
+	if (hasModerator != true)
+	{
+		ServerCommand("Player "+player.GetPlayerName()+" FAILED to ban "+args[0]+"!")
+		print("Moderator permission not detected.");
+		return true;
+	}
+	
+	foreach(string arg in args)
+	{
+		int i = 0;
+		print("args["+i+"]="+args[i])
+	}
+
+	#if SERVER
+	// if player only typed "modban"
+	if (args.len() == 0)
+	{
+		// print every single player's name and their id
+		int i = 0;
+		foreach (entity p in GetPlayerArray())
+		{
+			string playername = p.GetPlayerName();
+			print("[" + i.tostring() + "] " + playername);
+			i++
+		}
+		return true;
+	}
+	array<entity> players = GetPlayerArray();
+	foreach(entity player in players)
+	{
+		string pname = player.GetPlayerName()
+		if(pname == args[0])
+		{
+			try {
+				print("banning "+player.GetPlayerName())
+				print("UID:"+player.GetUID())
+				ServerCommand("BanUID "+ player.GetUID());
+				print("kicking "+player.GetPlayerName())
+				print("UID:"+player.GetUID())
+				ServerCommand("kickid "+ player.GetUID());
+			} catch(e)
+			{
+				print("Unable to ban " + player.GetPlayerName() + ".")
+			}
+		}
+		
+	}
+	#endif
+
+	#if CLIENT
+
+	// if player only typed "modban"
+	if (args.len() == 0)
+	{
+		// print every single player's name and their id
+		int i = 0;
+		foreach (entity p in GetPlayerArray())
+		{
+			string playername = p.GetPlayerName();
+			print("[" + i.tostring() + "] " + playername);
+			i++
+		}
+		return true;
+	}
+
+	#endif
+
+	return true;
+}

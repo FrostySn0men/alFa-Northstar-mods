@@ -1,0 +1,48 @@
+global function LISTCommand
+
+void function LISTCommand()
+{
+	#if SERVER
+	AddClientCommandCallback("modlist", LIST);
+	#endif
+}
+
+bool function LIST(entity player, array<string> args)
+{
+	#if SERVER
+
+	// if player only typed "list"
+	if (args.len() == 0)
+	{
+		// print every single player's name and their id
+		int i = 0;
+		foreach (entity p in GetPlayerArray())
+		{
+			string playername = p.GetPlayerName();
+			print("[" + i.tostring() + "] " + playername);
+			i++
+		}
+		return true;
+	}
+
+	#endif
+	#if CLIENT
+
+	// if player only typed "list"
+	if (args.len() == 0)
+	{
+		// print every single player's name and their id
+		int i = 0;
+		foreach (entity p in GetPlayerArray())
+		{
+			string playername = p.GetPlayerName();
+			print("[" + i.tostring() + "] " + playername);
+			i++
+		}
+		return true;
+	}
+
+	#endif
+
+	return true;
+}
