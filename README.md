@@ -22,3 +22,4 @@ Use:
 Open console (use ` aka backtick, aka incorrectly as tilde) and type one of the following in your client:
 modkick <OriginName>
 modban <OriginName>
+modunban <OriginName>
