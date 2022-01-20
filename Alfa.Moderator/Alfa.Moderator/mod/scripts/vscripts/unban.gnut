@@ -3,11 +3,11 @@ global function UNBANCommand
 void function UNBANCommand()
 {
 	#if SERVER
-	AddClientCommandCallback("modunban", UNBAN);
+	AddClientCommandCallback("modunban", UNBANCMD);
 	#endif
 }
 
-bool function UNBAN(entity player, array<string> args)
+bool function UNBANCMD(entity player, array<string> args)
 {
 
 	bool hasModerator = false;
@@ -49,8 +49,7 @@ bool function UNBAN(entity player, array<string> args)
 		{
 			try {
 				print("unbanning "+player.GetPlayerName())
-				print("UID:"+player.GetUID())
-				ServerCommand("BanUID "+ player.GetUID());
+				ServerCommand("unban "+player.GetPlayerName()+"");
 			} catch(e)
 			{
 				print("Unable to unban " + player.GetPlayerName() + ".")
