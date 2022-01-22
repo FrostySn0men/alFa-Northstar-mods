@@ -1,7 +1,7 @@
 {
 	"Name" : "alFa.Moderator",
 	"Description" : "Moderator group level functions and private_match lockdown for public servers",
-	"Version": "1.0.1",
+	"Version": "1.0.2",
 	"LoadPriority": 2,
 
 	"ConVars": [
@@ -42,6 +42,10 @@
 			"ServerCallback": {
 				"After": "UNBANCommand"
 			}
+		},
+		{
+			"Path": "_private_lobby.gnut",
+			"RunOn": "SERVER && MP"
 		},
 		{
 			"Path": "moderator.gnut",

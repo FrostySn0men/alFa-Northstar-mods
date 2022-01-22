@@ -1,0 +1,277 @@
+global function ClientCommandCallback_PrivateMatchLaunch
+global function ClientCommandCallback_PrivateMatchSetMode
+global function ClientCommandCallback_SetCustomMap
+global function StartMatch
+global function ClientCommandCallback_PrivateMatchSetPlaylistVarOverride
+global function ClientCommandCallback_ResetMatchSettingsToDefault
+
+
+struct {
+	int startState
+	string map = "mp_forwardbase_kodai"
+	string mode = "aitdm"
+} file 
+
+void function ModeratorPrivateLobby_Init()
+{
+	SetConVarBool( "ns_private_match_only_host_can_start",true)
+	AddClientCommandCallback( "PrivateMatchLaunch", ClientCommandCallback_PrivateMatchLaunch )
+	AddClientCommandCallback( "PrivateMatchSetMode", ClientCommandCallback_PrivateMatchSetMode )
+	AddClientCommandCallback( "SetCustomMap", ClientCommandCallback_SetCustomMap )
+//	AddClientCommandCallback( "PrivateMatchSwitchTeams", ClientCommandCallback_PrivateMatchSwitchTeams )
+//	AddClientCommandCallback( "PrivateMatchToggleSpectate", ClientCommandCallback_PrivateMatchToggleSpectate )
+	
+	AddClientCommandCallback( "PrivateMatchSetPlaylistVarOverride", ClientCommandCallback_PrivateMatchSetPlaylistVarOverride )
+	AddClientCommandCallback( "ResetMatchSettingsToDefault", ClientCommandCallback_ResetMatchSettingsToDefault )
+}
+
+bool function ClientCommandCallback_PrivateMatchLaunch( entity player, array<string> args )
+{
+	bool hasModerator = false;
+	hasModerator=CheckModerator(player)
+
+
+	if (CheckModeratorAvailable() && hasModerator != true)
+	{
+		print("Moderator permission not detected, not permitting Private Match Launch!");
+		return true;
+	}
+
+	if ( GetConVarBool( "ns_private_match_only_host_can_start" ) )
+		if ( !NSIsPlayerIndexLocalPlayer( player.GetPlayerIndex() ) )
+			return true
+
+	if ( file.startState == ePrivateMatchStartState.STARTING ) 
+	{
+		// cancel start if we're already mid-countdown
+		file.startState = ePrivateMatchStartState.READY
+		SetUIVar( level, "privatematch_starting", ePrivateMatchStartState.READY )
+		SetUIVar( level, "gameStartTime", null )
+	}
+	else
+	{
+		// start match
+		file.startState = ePrivateMatchStartState.STARTING
+		thread StartMatch()
+	}
+	
+	return true
+}
+
+bool function ClientCommandCallback_PrivateMatchSetMode( entity player, array<string> args )
+{
+	bool hasModerator = false;
+	hasModerator=CheckModerator(player)
+
+	SetConVarInt("ns_private_match_only_host_can_change_settings", 2);
+
+
+	if (CheckModeratorAvailable() && hasModerator != true)
+	{
+		print("Moderator permission not detected, refusing to allow parivate match mode set!");
+		return true;
+	}
+
+	SetConVarInt("ns_private_match_only_host_can_change_settings",0);
+
+	if ( file.startState == ePrivateMatchStartState.STARTING )
+		return true
+
+	if ( args.len() != 1 )
+		return true
+	
+	if ( GetConVarInt( "ns_private_match_only_host_can_change_settings" ) == 2 )
+		if ( !NSIsPlayerIndexLocalPlayer( player.GetPlayerIndex() ) )
+			return true
+	
+	// todo: need to verify this value
+	file.mode = args[0]
+	//GameRules_SetGameMode( args[0] ) // can't do this here due to out of sync errors with new clients
+	
+	RefreshPlayerTeams()
+
+	SetUIVar( level, "privatematch_mode", GetPrivateMatchModeIndex( args[0] ) ) 
+	return true
+}
+
+bool function ClientCommandCallback_SetCustomMap( entity player, array<string> args )
+{
+	bool hasModerator = false;
+	hasModerator=CheckModerator(player)
+
+
+	if (CheckModeratorAvailable() && hasModerator != true)
+	{
+		print("Moderator permission not detected, refusing to allow map set!");
+		return true;
+	}
+
+	if ( file.startState == ePrivateMatchStartState.STARTING )
+		return true
+		
+	if ( args.len() != 1 )
+		return true
+	
+	if ( GetConVarInt( "ns_private_match_only_host_can_change_settings" ) == 2 )
+		if ( !NSIsPlayerIndexLocalPlayer( player.GetPlayerIndex() ) )
+			return true
+	
+	// todo: need to verify this value
+	file.map = args[0]
+	
+	// todo: this should NOT be necessary, private matches should use an api to register maps in the future rather than hardcoded ids
+	// should be removed whenever possible really
+	SetUIVar( level, "privatematch_map", GetPrivateMatchMapIndex( args[0] ) )
+	return true
+}
+
+void function StartMatch()
+{	
+	/*
+	bool hasModerator = false;
+	hasModerator=CheckModerator(player)
+
+
+	if (CheckModeratorAvailable() && hasModerator != true)
+	{
+		print("Moderator permission not detected.");
+		return;
+	}
+	*/
+
+	// set starting uivar
+	SetUIVar( level, "privatematch_starting", ePrivateMatchStartState.STARTING )
+	
+	// start countdown
+	SetUIVar( level, "gameStartTime", Time() + GetConVarFloat( "ns_private_match_countdown_length" ) ) 
+	float countdownEndTime = Time() + GetConVarFloat( "ns_private_match_countdown_length" )
+	
+	// can't use start here because we need to check stuff
+	while ( Time() < countdownEndTime )
+	{
+		// stop if the countdown's been cancelled
+		if ( file.startState != ePrivateMatchStartState.STARTING )
+			return
+	
+		WaitFrame()
+	}
+		
+	// do this before setting playlist
+	if ( GetConVarBool( "ns_private_match_override_maxplayers" ) )
+		SetPlaylistVarOverride( "max_players", GetCurrentPlaylistVarString( "max_players", "16" ) )
+		
+	try
+	{
+		// todo: not every gamemode uses the same playlist as their name! need some code to resolve these manually
+		// would be nice if the gamemode api got some tweaks to allow for registering private match gamemodes maybe
+		SetCurrentPlaylist( file.mode )
+	}
+	catch ( exception ) 
+	{
+		// temp
+		if ( file.mode == "speedball" )
+			SetCurrentPlaylist( "lf" )
+	
+		print( "couldn't find playlist for gamemode " + file.mode )
+	}
+	
+	RefreshPlayerTeams()
+	
+	SetConVarString( "ns_private_match_last_map", file.map )
+	SetConVarString( "ns_private_match_last_mode", file.mode )
+	//SetConVarBool( "ns_should_return_to_lobby", true ) // potentially temp?
+	
+	string mode = file.mode
+	if ( !( mode in GAMETYPE_TEXT ) )
+		mode = GetPlaylistGamemodeByIndex( file.mode, 0 )
+	
+	GameRules_ChangeMap( file.map, mode )
+}
+
+
+bool function ClientCommandCallback_PrivateMatchSetPlaylistVarOverride( entity player, array<string> args )
+{
+	bool hasModerator = false;
+	hasModerator=CheckModerator(player)
+
+
+	if (CheckModeratorAvailable() && hasModerator != true)
+	{
+		print("Moderator permission not detected.");
+		return true;
+	}
+	if ( args.len() < 2 )
+		return true
+		
+	if ( GetConVarInt( "ns_private_match_only_host_can_change_settings" ) >= 1 )
+		if ( !NSIsPlayerIndexLocalPlayer( player.GetPlayerIndex() ) )
+			return true
+		
+	bool found = false
+	foreach ( string category in GetPrivateMatchSettingCategories() )
+	{
+		foreach ( CustomMatchSettingContainer setting in GetPrivateMatchCustomSettingsForCategory( category ) )
+		{
+			if ( args[ 0 ] == setting.playlistVar )
+			{
+				found = true
+				break
+			}
+		}
+	}
+		
+	if ( found )
+		SetPlaylistVarOverride( args[0], args[1] )
+	
+	return true
+}
+
+bool function ClientCommandCallback_ResetMatchSettingsToDefault( entity player, array<string> args )
+{
+	bool hasModerator = false;
+	hasModerator=CheckModerator(player)
+
+
+	if (CheckModeratorAvailable() && hasModerator != true)
+	{
+		print("Moderator permission not detected.");
+		return true;
+	}
+
+	if ( GetConVarInt( "ns_private_match_only_host_can_change_settings" ) >= 1 )
+		if ( !NSIsPlayerIndexLocalPlayer( player.GetPlayerIndex() ) )
+			return true
+
+	ClearPlaylistVarOverrides()
+	return true
+}
+
+void function RefreshPlayerTeams()
+{
+	int maxTeams = GetGamemodeVarOrUseValue( file.mode, "max_teams", "2" ).tointeger()
+	int maxPlayers = GetGamemodeVarOrUseValue( file.mode, "max_players", "12" ).tointeger()
+
+	// special case for situations where we wrongly assume ffa teams because there's 2 teams/2 players
+	if ( maxPlayers == maxTeams && maxTeams > 2 )
+	{
+		array<entity> players = GetPlayerArray()
+		for ( int i = 0; i < players.len(); i++ )
+			SetTeam( players[ i ], i + 7 ) // 7 is the lowest ffa team
+	}
+	else
+	{
+		bool lastSetMilitia = false
+		foreach ( entity player in GetPlayerArray() )
+		{
+			if ( player.GetTeam() == TEAM_MILITIA || player.GetTeam() == TEAM_IMC )
+				continue
+				
+			if ( lastSetMilitia ) // ensure roughly evenish distribution
+				SetTeam( player, TEAM_IMC )
+			else
+				SetTeam( player, TEAM_MILITIA )
+				
+			lastSetMilitia = !lastSetMilitia
+		}
+	}
+}

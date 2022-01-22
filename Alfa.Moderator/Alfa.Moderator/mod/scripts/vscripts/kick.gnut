@@ -50,7 +50,8 @@ bool function KICK(entity player, array<string> args)
 			try {
 				print("kicking "+player.GetPlayerName())
 				print("UID:"+player.GetUID())
-				ServerCommand("kickid "+ player.GetUID());
+				// ServerCommand("kickid "+ player.GetUID());
+				ServerCommand("kick "+ player.GetPlayerName());
 			} catch(e)
 			{
 				print("Unable to kick " + player.GetPlayerName() + ".")
@@ -80,3 +81,4 @@ bool function KICK(entity player, array<string> args)
 
 	return true;
 }
+

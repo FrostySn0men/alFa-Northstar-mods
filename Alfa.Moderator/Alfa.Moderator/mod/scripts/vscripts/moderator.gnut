@@ -1,6 +1,6 @@
 global function Moderator_Init
 global function CheckModerator
-
+global function CheckModeratorAvailable
 
 struct {
 	array<string> MODERATOR
@@ -10,6 +10,7 @@ struct {
 void function Moderator_Init()
 {
 	UpdateModeratorList()
+	// SetServerVar
 }
 
 void function UpdateModeratorList()
@@ -49,3 +50,22 @@ bool function CheckModerator( entity player )
 	}
 	return hasModerator;
 }
+
+bool function CheckModeratorAvailable()
+{
+	return true;
+
+	UpdateModeratorList()
+	if ( file.MODERATOR.len() == 0 )
+		return false;
+
+
+	array<entity> players = GetPlayerArray();
+	foreach(entity player in players)
+	{
+		if(CheckModerator(player))
+			return true;		
+	}
+	return false;
+}
+
